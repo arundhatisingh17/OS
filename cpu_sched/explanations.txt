@@ -1,0 +1,141 @@
+ostep, ch:8 mlfq
+
+Note: Quantum refers to the maximum time period after which a job gets demoted to a lower priority level irrespective of whether it has completed the job or not, while 
+allotment refers to the number of quanta per priority level after which a particular job can get demoted to another priority level. 
+
+1. Run a few randomly-generated problems with just two jobs and two queues; compute the MLFQ execution trace for each. Make your life easier by limiting the length of each job and turning off
+I/Os.
+
+Solution 1:
+
+computed mlfq trace:
+Here is the list of inputs:
+OPTIONS jobs 2
+OPTIONS queues 2
+OPTIONS allotments for queue  1 is   1
+OPTIONS quantum length for queue  1 is  10
+OPTIONS allotments for queue  0 is   1
+OPTIONS quantum length for queue  0 is  10
+OPTIONS boost 0
+OPTIONS ioTime 0
+OPTIONS stayAfterIO False
+OPTIONS iobump False
+
+
+For each job, three defining characteristics are given:
+  startTime : at what time does the job enter the system
+  runTime   : the total CPU time needed by the job to finish
+  ioFreq    : every ioFreq time units, the job issues an I/O
+              (the I/O takes ioTime units to complete)
+
+Job List:
+  Job  0: startTime   0 - runTime   8 - ioFreq   0
+  Job  1: startTime   0 - runTime   4 - ioFreq   0
+
+
+Execution Trace:
+
+[ time 0 ] JOB BEGINS by JOB 0
+[ time 0 ] JOB BEGINS by JOB 1
+[ time 0 ] Run JOB 0 at PRIORITY 1 [ TICKS 9 ALLOT 1 TIME 7 (of 8) ]
+[ time 1 ] Run JOB 0 at PRIORITY 1 [ TICKS 8 ALLOT 1 TIME 6 (of 8) ]
+[ time 2 ] Run JOB 0 at PRIORITY 1 [ TICKS 7 ALLOT 1 TIME 5 (of 8) ]
+[ time 3 ] Run JOB 0 at PRIORITY 1 [ TICKS 6 ALLOT 1 TIME 4 (of 8) ]
+[ time 4 ] Run JOB 0 at PRIORITY 1 [ TICKS 5 ALLOT 1 TIME 3 (of 8) ]
+[ time 5 ] Run JOB 0 at PRIORITY 1 [ TICKS 4 ALLOT 1 TIME 2 (of 8) ]
+[ time 6 ] Run JOB 0 at PRIORITY 1 [ TICKS 3 ALLOT 1 TIME 1 (of 8) ]
+[ time 7 ] Run JOB 0 at PRIORITY 1 [ TICKS 2 ALLOT 1 TIME 0 (of 8) ]
+[ time 8 ] FINISHED JOB 0
+[ time 8 ] Run JOB 1 at PRIORITY 1 [ TICKS 9 ALLOT 1 TIME 3 (of 4) ]
+[ time 9 ] Run JOB 1 at PRIORITY 1 [ TICKS 8 ALLOT 1 TIME 2 (of 4) ]
+[ time 10 ] Run JOB 1 at PRIORITY 1 [ TICKS 7 ALLOT 1 TIME 1 (of 4) ]
+[ time 11 ] Run JOB 1 at PRIORITY 1 [ TICKS 6 ALLOT 1 TIME 0 (of 4) ]
+[ time 12 ] FINISHED JOB 1
+
+Final statistics:
+  Job  0: startTime   0 - response   0 - turnaround   8
+  Job  1: startTime   0 - response   8 - turnaround  12
+
+  Avg  1: startTime n/a - response 4.00 - turnaround 10.00
+
+
+
+
+
+
+  2. How would you run the scheduler to reproduce each of the examples in the chapter?
+
+  Solution 2: 
+
+    Example 1 - A single long running job (pg 4, chap 8): A single long running job would start at the highest priority queue and then get demoted to another priority
+    queue after a set number of quantas/allotment time. The example does not discuss priority boost yet to avoid starvation. 
+
+    Example 2 - By principle, the scheduler demotes the job after it has surpassed its allotment/# of quantas assigned to the priority list. The shorter job naturally
+    completes before the longer job. 
+
+    Example 3 - What about I/O: Do not penalize for relinquishig the CPU  before allotment time and keep it at the same priority level.
+    (start from high priority, eventually decay priority)
+    A single long running job + a job involving I/O (pg 4, chap 8): Both the jobs are pushed to the highest priority after which the shorter job relinquishes
+    the cpu before its allotment time. Thus, the shorter job remains in the same prioirty because it relinquishes the processor before its allotment time while the longer
+    is periodically demoted to the lower priority queue. 
+
+
+  3. How would you configure the scheduler parameters to behave just like a round-robin scheduler?
+
+Given Parameters: 
+  
+    parser.add_option('-s', '--seed', help='the random seed', 
+                    default=0, action='store', type='int', dest='seed')
+    parser.add_option('-n', '--numQueues',
+                    help='number of queues in MLFQ (if not using -Q)', 
+                    default=3, action='store', type='int', dest='numQueues')
+    parser.add_option('-q', '--quantum', help='length of time slice (if not using -Q)',
+                    default=10, action='store', type='int', dest='quantum')
+    parser.add_option('-a', '--allotment', help='length of allotment (if not using -A)',
+                    default=1, action='store', type='int', dest='allotment')
+    parser.add_option('-Q', '--quantumList',
+                    help='length of time slice per queue level, specified as ' + \
+                    'x,y,z,... where x is the quantum length for the highest ' + \
+                    'priority queue, y the next highest, and so forth', 
+                    default='', action='store', type='string', dest='quantumList')
+    parser.add_option('-A', '--allotmentList',
+                    help='length of time allotment per queue level, specified as ' + \
+                    'x,y,z,... where x is the # of time slices for the highest ' + \
+                    'priority queue, y the next highest, and so forth', 
+                    default='', action='store', type='string', dest='allotmentList')
+    parser.add_option('-j', '--numJobs', default=3, help='number of jobs in the system',
+                    action='store', type='int', dest='numJobs')
+    parser.add_option('-m', '--maxlen', default=100, help='max run-time of a job ' +
+                    '(if randomly generating)', action='store', type='int',
+                    dest='maxlen')
+    parser.add_option('-M', '--maxio', default=10,
+                    help='max I/O frequency of a job (if randomly generating)',
+                    action='store', type='int', dest='maxio')
+    parser.add_option('-B', '--boost', default=0,
+                    help='how often to boost the priority of all jobs back to ' +
+                    'high priority', action='store', type='int', dest='boost')
+    parser.add_option('-i', '--iotime', default=5,
+                    help='how long an I/O should last (fixed constant)',
+                    action='store', type='int', dest='ioTime')
+    parser.add_option('-S', '--stay', default=False,
+                    help='reset and stay at same priority level when issuing I/O',
+                    action='store_true', dest='stay')
+    parser.add_option('-I', '--iobump', default=False,
+                    help='if specified, jobs that finished I/O move immediately ' + \
+                    'to front of current queue',
+                    action='store_true', dest='iobump')
+    parser.add_option('-l', '--jlist', default='',
+                    help='a comma-separated list of jobs to run, in the form ' + \
+                    'x1,y1,z1:x2,y2,z2:... where x is start time, y is run ' + \
+                    'time, and z is how often the job issues an I/O request',
+                    action='store', type='string', dest='jlist')
+
+
+    Parameters to change for the scheduler to behave like a round-robin scheduler: 
+
+    numQueues = 1 (We apply roundRobin on jobs with the same priority)
+    quantum = <need to set length of time slice>
+    allotment = <not relevant since we are not using priority queues, round robin is applied within priority queues>
+    boost = <We do not need a periodic boost of cpu-intensive jobs since we are dealing with a single priority queue>
+    stay/ioBump: does not matter either in a single queue round-robin
+
